@@ -40,14 +40,12 @@ jobs:
           go install honnef.co/go/tools/cmd/staticcheck@latest
           staticcheck ./...
         working-directory: Server/MuchToDo
-        continue-on-error: true
 
       - name: Run vulnerability scan
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
         working-directory: Server/MuchToDo
-        continue-on-error: true
 
   build:
     name: Build and push Docker image
