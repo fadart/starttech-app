@@ -121,10 +121,22 @@ jobs:
 
       - name: Wait for instance refresh to complete
         run: |
-          echo "Waiting for instance refresh..."
-          aws autoscaling wait \
-            --auto-scaling-group-name ${{ secrets.ASG_NAME }} || true
-          sleep 30
+          echo "Waiting for instance refresh to complete..."
+          for i in {1..30}; do
+            STATUS=$(aws autoscaling describe-instance-refreshes \
+              --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
+              --query 'InstanceRefreshes[0].Status' \
+              --output text)
+            echo "Status: $STATUS"
+            if [ "$STATUS" = "Successful" ]; then
+              echo "Instance refresh completed successfully"
+              break
+            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
+              echo "Instance refresh failed with status: $STATUS"
+              exit 1
+            fi
+            sleep 30
+          done
 
       - name: Run smoke tests
         run: |
@@ -144,6 +156,7 @@ jobs:
 
       - name: Configure CloudWatch monitoring
         run: |
+          ALB_SUFFIX=$(echo "${{ secrets.ALB_ARN }}" | sed 's/.*:loadbalancer\///')
           aws cloudwatch put-metric-alarm \
             --alarm-name "starttech-backend-errors" \
             --alarm-description "Backend error rate too high" \
@@ -153,7 +166,8 @@ jobs:
             --period 60 \
             --threshold 10 \
             --comparison-operator GreaterThanThreshold \
-            --evaluation-periods 2
+            --evaluation-periods 2 \
+            --dimensions Name=LoadBalancer,Value="$ALB_SUFFIX"
 
       - name: Notify deployment success
         run: |
