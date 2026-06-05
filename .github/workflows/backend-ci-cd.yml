@@ -140,7 +140,11 @@ jobs:
 
       - name: Run smoke tests
         run: |
-          ALB_URL=${{ secrets.ALB_URL }}
+          ALB_URL="${{ secrets.ALB_URL }}"
+          if [ -z "$ALB_URL" ]; then
+            echo "Error: ALB_URL secret is not set"
+            exit 1
+          fi
           echo "Running smoke tests against $ALB_URL"
           for i in {1..5}; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" $ALB_URL/health)
