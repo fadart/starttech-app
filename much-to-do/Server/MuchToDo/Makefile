@@ -42,3 +42,4 @@ integration-test:
 	go test -tags=integration -v ./...
 
 .PHONY: run build clean tidy dc-up dc-down generate-docs unit-test integration-test
+
