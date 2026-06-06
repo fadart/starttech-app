@@ -1,21 +1,11 @@
 # StartTech Application
 
-A full-stack Todo app with user authentication. The frontend is built with React and the backend is a Go API. Both are deployed on AWS with automated CI/CD pipelines.
+A full-stack Todo application built with React (frontend) and Go (backend), deployed on AWS using Terraform with a fully automated CI/CD pipeline.
 
-## How it works
+## Architecture
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full system architecture documentation.
 
-```
-Users → CloudFront → S3 (React frontend)
-Users → CloudFront → ALB → EC2 (Go backend in Docker)
-                              ↓              ↓
-                         MongoDB Atlas   ElastiCache Redis
-                              ↓
-                         CloudWatch Logs
-```
-
-All traffic goes through CloudFront. API calls are proxied through CloudFront to the ALB — this avoids mixed content issues since everything stays on HTTPS.
-
-## Repo structure
+## Repository Structure
 
 ```
 starttech-app/
@@ -23,116 +13,185 @@ starttech-app/
 │   ├── frontend-ci-cd.yml
 │   └── backend-ci-cd.yml
 ├── much-to-do/
-│   ├── Client/              # React frontend (Vite + TypeScript)
-│   └── Server/MuchToDo/     # Go backend (Gin framework)
-├── scripts/
-│   ├── deploy-frontend.sh
-│   ├── deploy-backend.sh
-│   ├── health-check.sh
-│   └── rollback.sh
-└── README.md
+│   ├── Client/                     # React frontend
+│   │   ├── src/
+│   │   │   ├── routes/
+│   │   │   ├── components/
+│   │   │   ├── context/
+│   │   │   ├── lib/
+│   │   │   └── types/
+│   │   ├── .env.example
+│   │   └── package.json
+│   └── Server/MuchToDo/            # Go backend
+│       ├── cmd/api/main.go
+│       ├── internal/
+│       │   ├── auth/
+│       │   ├── cache/
+│       │   ├── config/
+│       │   ├── database/
+│       │   ├── handlers/
+│       │   ├── middleware/
+│       │   ├── models/
+│       │   └── routes/
+│       ├── docs/
+│       └── .env.example
+└── scripts/
+    ├── deploy-frontend.sh
+    ├── deploy-backend.sh
+    ├── health-check.sh
+    └── rollback.sh
 ```
 
-## Running locally
+## Prerequisites
+
+- Node.js 20+
+- Go 1.25+
+- Docker
+- AWS CLI configured
+- MongoDB Atlas connection string
+- Redis (local or ElastiCache)
+
+## Local Development
 
 ### Backend
 
 ```bash
 cd much-to-do/Server/MuchToDo
 cp .env.example .env
-# fill in MONGO_URI and JWT_SECRET_KEY
+# Fill in MONGO_URI, JWT_SECRET_KEY, and Redis settings in .env
 
-docker compose up  # starts MongoDB and Redis alongside the app
+# Run with Docker Compose (includes MongoDB + Redis)
+docker compose up
+
+# Or run directly
+go run cmd/api/main.go
 ```
 
-API runs on `http://localhost:8080`. Swagger docs at `http://localhost:8080/swagger/index.html`.
+The API will be available at `http://localhost:8080`.
 
 ### Frontend
 
 ```bash
 cd much-to-do/Client
 cp .env.example .env
-# set VITE_API_BASE_URL=http://localhost:8080
+# Set VITE_API_BASE_URL=http://localhost:8080
 
 npm install
 npm run dev
 ```
 
-App runs on `http://localhost:5173`.
+The app will be available at `http://localhost:5173`.
 
-## Environment variables
+## Environment Variables
 
-### Backend
+### Backend (`much-to-do/Server/MuchToDo/.env`)
 
-| Variable | Description |
-|----------|-------------|
-| `MONGO_URI` | MongoDB Atlas connection string |
-| `DB_NAME` | Database name (default: `much_todo_db`) |
-| `JWT_SECRET_KEY` | Secret for signing JWT tokens |
-| `REDIS_ADDR` | Redis address (e.g. `localhost:6379`) |
-| `ENABLE_CACHE` | Set to `true` to enable Redis caching |
-| `ALLOWED_ORIGINS` | Comma-separated CORS allowed origins |
-| `PORT` | Server port (default: `8080`) |
+| Variable | Description | Required |
+|---|---|---|
+| `PORT` | Server port (default: 8080) | No |
+| `MONGO_URI` | MongoDB Atlas connection string | Yes |
+| `DB_NAME` | Database name (default: much_todo_db) | No |
+| `JWT_SECRET_KEY` | Secret key for signing JWT tokens | Yes |
+| `JWT_EXPIRATION_HOURS` | Token expiry in hours (default: 72) | No |
+| `ALLOWED_ORIGINS` | Comma-separated CORS origins | Yes |
+| `ENABLE_CACHE` | Enable Redis caching (true/false) | No |
+| `REDIS_ADDR` | Redis address (e.g. localhost:6379) | If cache enabled |
+| `LOG_LEVEL` | Log level: DEBUG, INFO, WARN, ERROR | No |
+| `LOG_FORMAT` | Log format: json or text | No |
 
-### Frontend
+### Frontend (`much-to-do/Client/.env`)
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_BASE_URL` | Backend API base URL |
+| Variable | Description | Required |
+|---|---|---|
+| `VITE_API_BASE_URL` | Backend API base URL | Yes |
 
-## API endpoints
+## API Endpoints
 
-| Method | Path | Auth required |
-|--------|------|--------------|
-| GET | `/health` | No |
-| POST | `/auth/register` | No |
-| POST | `/auth/login` | No |
-| POST | `/auth/logout` | No |
-| GET | `/tasks` | Yes |
-| POST | `/tasks` | Yes |
-| PUT | `/tasks/:id` | Yes |
-| DELETE | `/tasks/:id` | Yes |
-| GET | `/users/me` | Yes |
-| PUT | `/users/me` | Yes |
-| PUT | `/users/me/password` | Yes |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/health` | No | Health check |
+| GET | `/swagger/*` | No | API documentation |
+| POST | `/auth/register` | No | Register user |
+| POST | `/auth/login` | No | Login |
+| POST | `/auth/logout` | No | Logout |
+| GET | `/auth/username-check/:username` | No | Check username availability |
+| GET | `/tasks` | Yes | List all tasks |
+| POST | `/tasks` | Yes | Create task |
+| GET | `/tasks/:id` | Yes | Get task by ID |
+| PUT | `/tasks/:id` | Yes | Update task |
+| DELETE | `/tasks/:id` | Yes | Delete task |
+| GET | `/users/me` | Yes | Get current user |
+| PUT | `/users/me` | Yes | Update profile |
+| PUT | `/users/me/password` | Yes | Change password |
+| DELETE | `/users/me` | Yes | Delete account |
 
-## CI/CD pipelines
+Full interactive docs available at `/swagger/index.html` when the server is running.
 
-### Frontend pipeline
-Triggers on push to `feature/full-stack` when files in `Client/` change.
+## CI/CD Pipelines
 
-1. Install dependencies
-2. Lint (ESLint)
-3. Security audit (`npm audit --audit-level=high`)
-4. Build production bundle
-5. Sync to S3
-6. Invalidate CloudFront cache
+Both pipelines trigger on push to `main` for their respective directories, and can also be triggered manually via `workflow_dispatch`.
 
-### Backend pipeline
-Triggers on push to `feature/full-stack` when files in `Server/` change.
+### Frontend Pipeline
 
-1. Run unit tests
-2. Static analysis (staticcheck)
-3. Vulnerability scan (govulncheck)
-4. Build Docker image
-5. Scan image (Trivy)
-6. Push to ECR
-7. Rolling deploy via ASG instance refresh
-8. Smoke test against `/health`
+```
+Install deps → Lint → Security audit → Build → Upload artifact
+                                                      │
+                                               Deploy to S3
+                                               Invalidate CloudFront
+```
 
-## GitHub Actions secrets
+### Backend Pipeline
 
-| Secret | Used by |
-|--------|---------|
-| `AWS_ACCESS_KEY_ID` | Both |
-| `AWS_SECRET_ACCESS_KEY` | Both |
-| `VITE_API_BASE_URL` | Frontend |
-| `S3_BUCKET_NAME` | Frontend |
-| `CLOUDFRONT_DISTRIBUTION_ID` | Frontend |
-| `ASG_NAME` | Backend |
-| `ALB_URL` | Backend |
-| `ALB_ARN` | Backend |
+```
+Go tests → staticcheck → govulncheck
+                │
+          Docker build → Trivy image scan → Push to ECR
+                                                  │
+                                         ASG instance refresh
+                                         Wait for completion
+                                         Smoke test /health
+                                         CloudWatch alarm setup
+```
+
+### Required GitHub Actions Secrets
+
+| Secret | Used by | Description |
+|---|---|---|
+| `AWS_ACCESS_KEY_ID` | Both | AWS credentials |
+| `AWS_SECRET_ACCESS_KEY` | Both | AWS credentials |
+| `VITE_API_BASE_URL` | Frontend | API URL injected at build time |
+| `S3_BUCKET_NAME` | Frontend | S3 bucket for static files |
+| `CLOUDFRONT_DISTRIBUTION_ID` | Frontend | CloudFront distribution to invalidate |
+| `ASG_NAME` | Backend | Auto Scaling Group name |
+| `ALB_URL` | Backend | ALB DNS name for smoke tests |
+| `ALB_ARN` | Backend | ALB ARN for CloudWatch alarm dimensions |
+
+## Deployment Scripts
+
+Manual deployment outside of CI/CD:
+
+```bash
+# Deploy frontend
+./scripts/deploy-frontend.sh <s3-bucket-name> <cloudfront-distribution-id>
+
+# Deploy backend
+./scripts/deploy-backend.sh <asg-name> <ecr-registry> <image-tag>
+
+# Health check
+./scripts/health-check.sh
+
+# Rollback
+./scripts/rollback.sh
+```
 
 ## Infrastructure
 
-All AWS infrastructure is in the companion repo [starttech-infra](https://github.com/fadart/starttech-infra).
+All infrastructure is managed in the companion repository [starttech-infra](https://github.com/fadart/starttech-infra), which provisions:
+
+- VPC, subnets, NAT Gateways
+- ALB + Target Group
+- Auto Scaling Group (EC2)
+- S3 + CloudFront distribution
+- ElastiCache Redis cluster
+- CloudWatch log groups and dashboard
+- IAM roles and security groups
