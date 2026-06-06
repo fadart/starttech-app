@@ -114,6 +114,12 @@ jobs:
 
       - name: Deploy to ASG via rolling update
         run: |
+          # Cancel any existing instance refresh before starting a new one
+          aws autoscaling cancel-instance-refresh \
+            --auto-scaling-group-name ${{ secrets.ASG_NAME }} || true
+
+          sleep 10
+
           aws autoscaling start-instance-refresh \
             --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
             --preferences '{"MinHealthyPercentage": 50, "InstanceWarmup": 120}'
