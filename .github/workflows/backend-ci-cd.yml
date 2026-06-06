@@ -118,7 +118,7 @@ jobs:
           aws autoscaling cancel-instance-refresh \
             --auto-scaling-group-name ${{ secrets.ASG_NAME }} || true
 
-          sleep 10
+          sleep 60
 
           aws autoscaling start-instance-refresh \
             --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
