@@ -166,18 +166,16 @@ jobs:
 
       - name: Configure CloudWatch monitoring
         run: |
-          ALB_SUFFIX=$(echo "${{ secrets.ALB_ARN }}" | sed 's/.*:loadbalancer\///')
           aws cloudwatch put-metric-alarm \
             --alarm-name "starttech-backend-errors" \
             --alarm-description "Backend error rate too high" \
-            --metric-name "HTTPCode_Target_5XX_Count" \
-            --namespace "AWS/ApplicationELB" \
-            --statistic Sum \
+            --metric-name "CPUUtilization" \
+            --namespace "AWS/EC2" \
+            --statistic Average \
             --period 60 \
-            --threshold 10 \
+            --threshold 80 \
             --comparison-operator GreaterThanThreshold \
-            --evaluation-periods 2 \
-            --dimensions Name=LoadBalancer,Value="$ALB_SUFFIX"
+            --evaluation-periods 2
 
       - name: Notify deployment success
         run: |
