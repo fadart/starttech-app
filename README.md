@@ -5,31 +5,32 @@ A full-stack Todo application with user authentication, built with React (fronte
 ## Architecture
 
 ```
-                    ┌─────────────┐
-         Users ───► │  CloudFront │
-                    └──────┬──────┘
-                           │
-                    ┌──────▼──────┐
-                    │  S3 Bucket  │  ◄── React (Vite + TypeScript)
-                    └─────────────┘
-
-                    ┌─────────────┐
-         API  ───► │     ALB     │
-                   └──────┬──────┘
-                          │
-                   ┌──────▼──────┐
-                   │  ASG / EC2  │  ◄── Go (Gin) in Docker
-                   └──────┬──────┘
-                          │
-              ┌───────────┼───────────┐
-       ┌──────▼─────┐     │    ┌──────▼──────┐
-       │  MongoDB   │     │    │    Redis     │
-       │   Atlas    │     │    │ ElastiCache  │
-       └────────────┘     │    └─────────────┘
-                          │
-                   ┌──────▼──────┐
-                   │  CloudWatch │
-                   └─────────────┘
+                         ┌─────────────────────┐
+          Users ───────► │     CloudFront       │
+                         │  da2hzzlrvudt6       │
+                         └────────┬─────────────┘
+                                  │
+                    ┌─────────────┴──────────────┐
+                    │ /auth/* /tasks/*            │ default /*
+                    │ /users/* /health* /swagger/*│
+                    ▼                             ▼
+             ┌─────────────┐             ┌─────────────┐
+             │     ALB     │             │  S3 Bucket  │
+             └──────┬──────┘             │  (frontend) │
+                    │                    └─────────────┘
+             ┌──────▼──────┐
+             │  ASG / EC2  │  ◄── Go (Gin) in Docker
+             └──────┬──────┘
+                    │
+       ┌────────────┼────────────┐
+┌──────▼─────┐      │     ┌──────▼──────┐
+│  MongoDB   │      │     │    Redis     │
+│   Atlas    │      │     │ ElastiCache  │
+└────────────┘      │     └─────────────┘
+                    │
+             ┌──────▼──────┐
+             │  CloudWatch │
+             └─────────────┘
 ```
 
 ## Repository Structure
@@ -186,7 +187,7 @@ Go tests → staticcheck → govulncheck
 |---|---|---|
 | `AWS_ACCESS_KEY_ID` | Both | AWS credentials |
 | `AWS_SECRET_ACCESS_KEY` | Both | AWS credentials |
-| `VITE_API_URL` | Frontend | API URL injected at build time |
+| `VITE_API_BASE_URL` | Frontend | API URL injected at build time |
 | `S3_BUCKET_NAME` | Frontend | S3 bucket for static files |
 | `CLOUDFRONT_DISTRIBUTION_ID` | Frontend | CloudFront distribution to invalidate |
 | `ASG_NAME` | Backend | Auto Scaling Group name |
