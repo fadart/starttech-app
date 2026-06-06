@@ -5,7 +5,7 @@ on:
     branches:
       - feature/full-stack
     paths:
-      - 'Server/**'
+      - 'much-to-do/Server/**'
   workflow_dispatch:
 
 env:
@@ -26,27 +26,27 @@ jobs:
         with:
           go-version: '1.25'
           check-latest: true
-          cache-dependency-path: Server/MuchToDo/go.sum
+          cache-dependency-path: much-to-do/Server/MuchToDo/go.sum
 
       - name: Install dependencies
         run: go mod download
-        working-directory: Server/MuchToDo
+        working-directory: much-to-do/Server/MuchToDo
 
       - name: Run unit tests
         run: go test -v ./...
-        working-directory: Server/MuchToDo
+        working-directory: much-to-do/Server/MuchToDo
 
       - name: Run code quality check
         run: |
           go install honnef.co/go/tools/cmd/staticcheck@latest
           staticcheck ./...
-        working-directory: Server/MuchToDo
+        working-directory: much-to-do/Server/MuchToDo
 
       - name: Run vulnerability scan
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
-        working-directory: Server/MuchToDo
+        working-directory: much-to-do/Server/MuchToDo
 
   build:
     name: Build and push Docker image
@@ -80,7 +80,7 @@ jobs:
         run: |
           docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.meta.outputs.image_tag }} \
             -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest \
-            Server/MuchToDo
+            much-to-do/Server/MuchToDo
 
       - name: Scan Docker image for vulnerabilities
         uses: aquasecurity/trivy-action@master
