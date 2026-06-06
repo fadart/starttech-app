@@ -3,7 +3,7 @@ set -e
 
 S3_BUCKET=$1
 CLOUDFRONT_ID=$2
-BUILD_DIR="Client/dist"
+BUILD_DIR="much-to-do/Client/dist"
 
 if [ -z "$S3_BUCKET" ] || [ -z "$CLOUDFRONT_ID" ]; then
   echo "Usage: ./deploy-frontend.sh <s3-bucket-name> <cloudfront-distribution-id>"
@@ -11,7 +11,7 @@ if [ -z "$S3_BUCKET" ] || [ -z "$CLOUDFRONT_ID" ]; then
 fi
 
 echo "==> Building frontend..."
-cd Client
+cd much-to-do/Client
 npm ci
 npm run build
 cd ..

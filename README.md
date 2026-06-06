@@ -1,68 +1,40 @@
 # StartTech Application
 
-A full-stack Todo application with user authentication, built with React (frontend) and Go (backend), deployed on AWS with a fully automated CI/CD pipeline.
+A full-stack Todo application built with React (frontend) and Go (backend), deployed on AWS using Terraform with a fully automated CI/CD pipeline.
 
 ## Architecture
-
-```
-                         ┌─────────────────────┐
-          Users ───────► │     CloudFront       │
-                         │  da2hzzlrvudt6       │
-                         └────────┬─────────────┘
-                                  │
-                    ┌─────────────┴──────────────┐
-                    │ /auth/* /tasks/*            │ default /*
-                    │ /users/* /health* /swagger/*│
-                    ▼                             ▼
-             ┌─────────────┐             ┌─────────────┐
-             │     ALB     │             │  S3 Bucket  │
-             └──────┬──────┘             │  (frontend) │
-                    │                    └─────────────┘
-             ┌──────▼──────┐
-             │  ASG / EC2  │  ◄── Go (Gin) in Docker
-             └──────┬──────┘
-                    │
-       ┌────────────┼────────────┐
-┌──────▼─────┐      │     ┌──────▼──────┐
-│  MongoDB   │      │     │    Redis     │
-│   Atlas    │      │     │ ElastiCache  │
-└────────────┘      │     └─────────────┘
-                    │
-             ┌──────▼──────┐
-             │  CloudWatch │
-             └─────────────┘
-```
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full system architecture documentation.
 
 ## Repository Structure
 
 ```
 starttech-app/
 ├── .github/workflows/
-│   ├── frontend-ci-cd.yml    # React build → S3 → CloudFront
-│   └── backend-ci-cd.yml     # Go test → Docker → ECR → EC2
-├── Client/                   # React frontend
-│   ├── src/
-│   │   ├── routes/           # TanStack Router pages
-│   │   ├── components/       # Reusable UI components
-│   │   ├── context/          # Auth context
-│   │   ├── hooks/            # Custom hooks
-│   │   ├── lib/              # API client
-│   │   └── types/            # TypeScript types
-│   ├── .env.example
-│   └── package.json
-├── Server/MuchToDo/          # Go backend
-│   ├── cmd/api/main.go       # Entry point
-│   ├── internal/
-│   │   ├── auth/             # JWT token service
-│   │   ├── cache/            # Redis cache service
-│   │   ├── config/           # Environment config
-│   │   ├── database/         # MongoDB connection
-│   │   ├── handlers/         # HTTP handlers
-│   │   ├── middleware/       # CORS, auth middleware
-│   │   ├── models/           # Data models
-│   │   └── routes/           # Route registration
-│   ├── docs/                 # Swagger docs
-│   └── .env.example
+│   ├── frontend-ci-cd.yml
+│   └── backend-ci-cd.yml
+├── much-to-do/
+│   ├── Client/                     # React frontend
+│   │   ├── src/
+│   │   │   ├── routes/
+│   │   │   ├── components/
+│   │   │   ├── context/
+│   │   │   ├── lib/
+│   │   │   └── types/
+│   │   ├── .env.example
+│   │   └── package.json
+│   └── Server/MuchToDo/            # Go backend
+│       ├── cmd/api/main.go
+│       ├── internal/
+│       │   ├── auth/
+│       │   ├── cache/
+│       │   ├── config/
+│       │   ├── database/
+│       │   ├── handlers/
+│       │   ├── middleware/
+│       │   ├── models/
+│       │   └── routes/
+│       ├── docs/
+│       └── .env.example
 └── scripts/
     ├── deploy-frontend.sh
     ├── deploy-backend.sh
@@ -73,7 +45,7 @@ starttech-app/
 ## Prerequisites
 
 - Node.js 20+
-- Go 1.21+
+- Go 1.25+
 - Docker
 - AWS CLI configured
 - MongoDB Atlas connection string
@@ -84,7 +56,7 @@ starttech-app/
 ### Backend
 
 ```bash
-cd Server/MuchToDo
+cd much-to-do/Server/MuchToDo
 cp .env.example .env
 # Fill in MONGO_URI, JWT_SECRET_KEY, and Redis settings in .env
 
@@ -100,7 +72,7 @@ The API will be available at `http://localhost:8080`.
 ### Frontend
 
 ```bash
-cd Client
+cd much-to-do/Client
 cp .env.example .env
 # Set VITE_API_BASE_URL=http://localhost:8080
 
@@ -112,7 +84,7 @@ The app will be available at `http://localhost:5173`.
 
 ## Environment Variables
 
-### Backend (`Server/MuchToDo/.env`)
+### Backend (`much-to-do/Server/MuchToDo/.env`)
 
 | Variable | Description | Required |
 |---|---|---|
@@ -127,7 +99,7 @@ The app will be available at `http://localhost:5173`.
 | `LOG_LEVEL` | Log level: DEBUG, INFO, WARN, ERROR | No |
 | `LOG_FORMAT` | Log format: json or text | No |
 
-### Frontend (`Client/.env`)
+### Frontend (`much-to-do/Client/.env`)
 
 | Variable | Description | Required |
 |---|---|---|
@@ -157,7 +129,7 @@ Full interactive docs available at `/swagger/index.html` when the server is runn
 
 ## CI/CD Pipelines
 
-Both pipelines trigger on push to `feature/full-stack` for their respective directories, and can also be triggered manually via `workflow_dispatch`.
+Both pipelines trigger on push to `main` for their respective directories, and can also be triggered manually via `workflow_dispatch`.
 
 ### Frontend Pipeline
 
